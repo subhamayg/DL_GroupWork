@@ -53,10 +53,10 @@ def train(
     scheduler_name:     str   = "lambda",
     loss_name:          str   = "qa_nll",
     # *EXP-010
-    # *hypothesis: changing normalization will affect training stability and QA performance
-    # *intervention: changed norm_name from "layer_norm" to "group_norm"
+    # *hypothesis: changing normalization from layer_norm to group_norm will affect optimization stability and QA performance
+    # *intervention: changed the normalization strategy from layer_norm to group_norm
     # *control: kept the training recipe and evaluation setup fixed
-    # *result: F1 reached 6.46 and EM remained 0.00, so the baseline layer_norm setting was restored
+    # *result: changing normalization to group_norm increased losses and reduced test F1 relative to layer_norm, so layer_norm was retained
     norm_name:          str   = "layer_norm",   # "layer_norm" | "group_norm"
     norm_groups:        int   = 8,              # num_groups for group_norm
 
@@ -71,10 +71,11 @@ def train(
     # ── Scheduler hyperparameters ─────────────────────────────────────────────
     lr_step_size:       int   = 10000,  # step: decay every n steps
     lr_gamma:           float = 0.5,    # step: multiplicative decay factor
-    # *EXP-002
-    # *hypothesis: a warmup phase followed by cosine decay will improve early optimization stability compared with the previous non-warmup scheduler setup
-    # *intervention: exposed warmup_steps as a configurable scheduler hyperparameter for the warmup-plus-cosine schedule
-    # *control: kept optimizer, repaired codebase, dataset, batch size, num_steps, loss, seed, and evaluation protocol fixed
+    # *EXP-002                                                                                                                                                                                                        
+    # *hypothesis: a warmup phase followed by cosine decay will improve early optimization stability
+    # *intervention: changed the scheduler to the warmup-plus-cosine lambda schedule and enabled warmup_steps=20
+    # *control: kept the optimizer, dataset, batch size, num_steps, seed, loss, and evaluation setup fixed
+    # *result: losses decreased substantially relative to the previous Adam baseline, but QA performance remained weak
     warmup_steps:       int = 20, 
 
     # ── Model architecture ────────────────────────────────────────────────────
@@ -82,24 +83,24 @@ def train(
     ques_limit:         int   = 50,
     char_limit:         int   = 16,
     # *EXP-009
-    # *hypothesis: a smaller model width will improve optimization stability, though reduced capacity may hurt QA performance
-    # *intervention: reduced d_model from 96 to 64
+    # *hypothesis: changing model width will affect optimization stability and QA performance in the repaired QANet
+    # *intervention: compared model widths of 96, 64, and 112
     # *control: kept the training recipe and evaluation setup fixed
-    # *result: F1 fell to 6.27 and EM remained 0.00, so the baseline d_model=96 setting was restored
+    # *result: changing model width affected the loss-performance trade-off, but neither 64 nor 112 improved on the baseline 96-width setting in test F1, so d_model=96 was retained
     d_model:            int   = 96,
     # *EXP-008
-    # *hypothesis: fewer attention heads will improve optimization stability, though reducing head diversity may hurt QA performance
-    # *intervention: reduced num_heads from 8 to 4
+    # *hypothesis: changing the number of attention heads will affect the stability-performance trade-off in the repaired QANet
+    # *intervention: compared num_heads values of 8, 4, and 12
     # *control: kept the training recipe and evaluation setup fixed
-    # *result: F1 reached 7.15 and EM remained 0.00, but this did not improve on the stronger num_heads=8 baseline, so 8 heads were restored
+    # *result: changing the number of attention heads affected efficiency and optimization slightly, but neither 4 nor 12 improved on the baseline 8-head setting in test F1, so num_heads=8 was retained
     num_heads:          int   = 8,
     glove_dim:          int   = 300,
     char_dim:           int   = 64,
-    # *EXP-007
-    # *hypothesis: a lower dropout rate will improve training stability, though too little regularization may hurt QA performance
-    # *intervention: reduced dropout from 0.10 to 0.05
+    # *EXP-006
+    # *hypothesis: reducing dropout from 0.10 to 0.05 will improve the stability-generalization trade-off in the repaired QANet
+    # *intervention: compared dropout rates of 0.10, 0.05, and 0.50
     # *control: kept the training recipe and evaluation setup fixed
-    # *result: F1 improved to 7.22, EM stayed at 0.00, and dropout=0.05 was kept for later experiments
+    # *result: reducing dropout from 0.10 to 0.05 greatly improved training stability and modestly improved F1, while dropout=0.50 caused severe loss growth despite slightly higher F1, so 0.05 was retained as the preferred setting 
     dropout:            float = 0.05,
     dropout_char:       float = 0.05,
     pretrained_char:    bool  = False,
