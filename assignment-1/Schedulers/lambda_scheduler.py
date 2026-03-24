@@ -20,4 +20,7 @@ class LambdaLR(LRScheduler):
     def get_lr(self):
         t = self.last_epoch
         factor = self.lr_lambda(t)
-        return [base_lr + factor for base_lr in self.base_lrs]
+        # *FIX-II-009
+        # *change: 'return [base_lr + factor for base_lr in self.base_lrs]'
+        # *rationale: lambda learning-rate scheduling should scale the base learning rate multiplicatively, not add a constant offset to it
+        return [base_lr * factor for base_lr in self.base_lrs]

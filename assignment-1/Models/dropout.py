@@ -14,4 +14,7 @@ class Dropout(nn.Module):
         if not self.training or self.p == 0.0:
             return x
         mask = torch.bernoulli(torch.full_like(x, 1.0 - self.p))
-        return x * mask / self.p
+        # *FIX-II-001
+        # *change: 'return x * mask / self.p'
+        # *rationale: inverted dropout must scale by the keep probability 1 - p so the expected activation magnitude is preserved during training                                                                  
+        return x * mask / (1.0 - self.p)

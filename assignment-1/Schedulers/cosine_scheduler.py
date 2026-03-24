@@ -25,6 +25,9 @@ class CosineAnnealingLR(LRScheduler):
     def get_lr(self):
         t = self.last_epoch
         return [
-            self.eta_min + (base_lr - self.eta_min) * (1 + math.cos(math.PI * t / self.T_max))
+            # *FIX-I-004                                                                                 
+            # *change: 'math.PI'
+            # *rationale: replaces a non-existent constant with Python's actual lowercase math.pi, additionally standard cosine annealing includes a 0.5 factor so the learning rate decays from the base rate down to eta_min instead of starting at twice the intended magnitude
+            self.eta_min + 0.5 * (base_lr - self.eta_min) * (1 + math.cos(math.pi * t / self.T_max))  
             for base_lr in self.base_lrs
         ]

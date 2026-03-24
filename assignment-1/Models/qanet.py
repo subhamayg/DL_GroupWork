@@ -54,6 +54,11 @@ class QANet(nn.Module):
         self.cq_resizer = DepthwiseSeparableConv(d_model * 4, d_model, 5, init_name=init_name)
 
         base_enc = EncoderBlock(d_model, num_heads, dropout, conv_num=2, k=5, length=len_c, init_name=init_name, act_name=act_name, norm_name=norm_name, norm_groups=norm_groups)
+        # *EXP-006                                                                                         
+        # *hypothesis: a shallower modeling encoder will improve training stability, possibly at the cost of QA performance
+        # *intervention: reduced modeling encoder blocks from 7 to 4
+        # *control: kept the training recipe and evaluation setup fixed
+        # *result: improved stability, but F1 did not improve, so the baseline 7-block setting was restored
         self.model_enc_blks = nn.ModuleList([copy.deepcopy(base_enc) for _ in range(7)])
 
         self.out = Pointer(d_model)
@@ -62,8 +67,11 @@ class QANet(nn.Module):
         cmask = (Cwid == 0)  # True means PAD
         qmask = (Qwid == 0)
 
-        Cw, Cc = self.char_emb(Cwid), self.word_emb(Ccid)
-        Qw, Qc = self.word_emb(Qwid), self.char_emb(Qcid)
+        # *FIX-I-005                                                                                 
+        # *change: 'self.char_emb(Cwid), self.word_emb(Ccid)'
+        # *rationale: restores correct word/char embedding routing so each ID tensor is looked up in the matching vocabulary table  
+        Cw, Cc = self.word_emb(Cwid), self.char_emb(Ccid)                                                                                                                                                                 
+        Qw, Qc = self.word_emb(Qwid), self.char_emb(Qcid)  
 
         C, Q = self.emb(Cc, Cw), self.emb(Qc, Qw)
         C = self.context_conv(C)
@@ -72,7 +80,10 @@ class QANet(nn.Module):
         Ce = self.c_emb_enc(C, cmask)
         Qe = self.q_emb_enc(Q, qmask)
 
-        X = self.cq_att(Ce, Qe, qmask, cmask)
+        # *FIX-I-013                                                                                          
+        # *change: 'X = self.cq_att(Ce, Qe, qmask, cmask)'                                                    
+        # *rationale: passes context and question masks in the order expected by CQAttention.forward so each mask aligns with the correct attention axis 
+        X = self.cq_att(Ce, Qe, cmask, qmask)
 
         M1 = self.cq_resizer(X)
         for enc in self.model_enc_blks:

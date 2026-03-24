@@ -29,7 +29,10 @@ class PosEncoder(nn.Module):
         freqs = torch.tensor(
             [10000 ** (-i / d_model) if i % 2 == 0 else -10000 ** ((1 - i) / d_model) for i in range(d_model)],
             dtype=torch.float32
-        ).unsqueeze(0)  # [C, 1]
+        # *FIX-I-002                                                                                 
+        # *change: ').unsqueeze(0)'                                                               
+        # *rationale: makes freqs shape [C, 1], which broadcasts correctly against position encodings of shape [C, L]  
+        ).unsqueeze(1)  # [C, 1]
         phases = torch.tensor(
             [0.0 if i % 2 == 0 else math.pi / 2 for i in range(d_model)],
             dtype=torch.float32
@@ -118,10 +121,16 @@ class EncoderBlock(nn.Module):
             if (i + 1) % 2 == 0:
                 out = self.conv_drops[i](out)
             res = out
-            out = self.norms[i + 1](out)
+            # *FIX-I-012                                                                                
+            # *change: 'out = self.norms[i + 1](out)'                                                 
+            # *rationale: keeps the normalization index aligned with the current convolution block instead of shifting it past the end of the ModuleList
+            out = self.norms[i](out)
 
+        # *FIX-II-003
+        # *change: 'out = self.self_att(out, mask); out = res'
+        # *rationale: preserves the self-attention output in the residual pathway instead of discarding it immediately after computation
         out = self.self_att(out, mask)
-        out = res
+        out = out + res
         out = self.drop(out)
 
         res = out

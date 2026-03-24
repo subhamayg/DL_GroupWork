@@ -14,7 +14,6 @@ class Adam(Optimizer):
         v_hat = v / (1 - beta2^t)
         p = p - lr * m_hat / (sqrt(v_hat) + eps)
     """
-
     def __init__(self, params, lr=1.0, betas=(0.9, 0.999), eps=1e-7, weight_decay=0.0):
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
@@ -50,7 +49,10 @@ class Adam(Optimizer):
 
                 # Weight decay
                 if wd != 0.0:
-                    grad = grad.add(p, alpha=-wd)
+                    # *FIX-II-005                                                       
+                    # *change: 'grad = grad.add(p, alpha=-wd)' 
+                    # *rationale: L2-style weight decay should add the decay term to the gradient, not subtract it                                         
+                    grad = grad.add(p, alpha=wd) 
 
                 state = self.state[p]
 
@@ -60,17 +62,26 @@ class Adam(Optimizer):
                     state["exp_avg"] = torch.zeros_like(p)  # 1st moment (mean)
                     state["exp_avg_sq"] = torch.zeros_like(p)  # 2nd moment (variance)
 
-                m, v = state["m"], state["v"]
+                # *FIX-II-004
+                # *change: 'm, v = state["m"], state["v"]'
+                # *rationale: optimizer state keys must match the buffers created during initialization so moment estimates can be updated correctly    
+                m, v = state["exp_avg"], state["exp_avg_sq"]
                 state["step"] += 1
                 t = state["step"]
 
                 # Update biased moment estimates
                 m.mul_(beta1).add_(grad, alpha=1.0 - beta1)
-                v.mul_(beta2).add_(grad, alpha=1.0 - beta2)
+                # *FIX-II-006
+                # *change: 'v.mul_(beta2).add_(grad, alpha=1.0 - beta2)'
+                # *rationale: Adam's second moment must track squared gradients, not raw gradients                                                     
+                v.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2) 
 
                 # Bias correction
-                bias_correction1 = 1.0 - beta1 * t
-                bias_correction2 = 1.0 - beta2 * t
+                # *FIX-II-007                                                       
+                # *change: 'bias_correction1 = 1.0 - beta1 * t; bias_correction2 = 1.0 - beta2 * t'
+                # *rationale: Adam bias correction depends on beta raised to the step count, not beta multiplied by the step count
+                bias_correction1 = 1.0 - beta1 ** t                                 
+                bias_correction2 = 1.0 - beta2 ** t 
                 m_hat = m / bias_correction1
                 v_hat = v / bias_correction2
 

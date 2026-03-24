@@ -16,7 +16,10 @@ class Highway(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: [B, C, L] -> [B, L, C]
-        x = x.transpose(0, 2)
+        # *FIX-I-009                                                                                
+        # *change: 'x = x.transpose(0, 2)'                                                        
+        # *rationale: changes the tensor from [B, C, L] to [B, L, C] so nn.Linear(size, size) sees the feature dimension C on the last axis   
+        x = x.transpose(1, 2)
         for i in range(self.n):
             gate = torch.sigmoid(self.gate[i](x))
             nonlinear = self.act(self.linear[i](x))
@@ -36,7 +39,10 @@ class Embedding(nn.Module):
     def forward(self, ch_emb: torch.Tensor, wd_emb: torch.Tensor) -> torch.Tensor:
         # ch_emb: [B, L, char_len, d_char]
         # wd_emb: [B, L, d_word]
-        ch_emb = ch_emb.permute(0, 2, 1, 3)  # [B, d_char, L, char_len]
+        # *FIX-I-008                                                                                 
+        # *change: 'ch_emb = ch_emb.permute(0, 2, 1, 3)'                                          
+        # *rationale: fixes the tensor layout so d_char becomes the channel dimension expected by the char convolution  
+        ch_emb = ch_emb.permute(0, 3, 1, 2)  # [B, d_char, L, char_len]
         ch_emb = self.drop_char(ch_emb)
         ch_emb = self.conv2d(ch_emb)
         ch_emb = self.act(ch_emb)

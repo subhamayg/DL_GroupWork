@@ -52,7 +52,10 @@ class Conv1d(nn.Module):
 
         # 2. Sliding window: tensor.unfold(dim, size, step) → [B, C_in, L_out, k]
         L_out = x.size(2) - self.kernel_size + 1
-        x_unf = x.unfold(1, self.kernel_size, 1)  # [B, C_in, L_out, k]
+        # *FIX-I-010                                                                                
+        # *change: 'x_unf = x.unfold(1, self.kernel_size, 1)'                                     
+        # *rationale: Conv1d must slide over the sequence-length axis, so unfolding must happen on dimension 2 for input shaped [B, C_in, L] 
+        x_unf = x.unfold(2, self.kernel_size, 1)  # [B, C_in, L_out, k]
 
         # 3. Grouped multiply-accumulate
         G       = self.groups
@@ -121,7 +124,10 @@ class Conv2d(nn.Module):
             p = self.padding
             pad_h = x.new_zeros(B, C_in, p, W)
             x = torch.cat([pad_h, x, pad_h], dim=2)       # [B, C_in, H+2p, W]
-            pad_w = x.new_zeros(B, C_in, H, p)
+            # *FIX-I-007                                                                                 
+            # *change: 'pad_w = x.new_zeros(B, C_in, H, p)'                                           
+            # *rationale: matches width-padding tensors to the current height after height padding has already been applied  
+            pad_w = x.new_zeros(B, C_in, x.size(2), p)
             x = torch.cat([pad_w, x, pad_w], dim=3)       # [B, C_in, H+2p, W+2p]
 
         # 2. Sliding window along height then width
@@ -172,4 +178,7 @@ class DepthwiseSeparableConv(nn.Module):
             constant_(self.pointwise_conv.bias, 0.0)
 
     def forward(self, x):
-        return self.depthwise_conv(self.pointwise_conv(x))
+        # *FIX-I-006                                                                                 
+        # *change: 'return self.depthwise_conv(self.pointwi se_conv(x))'                          
+        # *rationale: restores the correct depthwise-then-pointwise execution order for separable convolution 
+        return self.pointwise_conv(self.depthwise_conv(x))

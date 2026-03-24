@@ -31,9 +31,17 @@ def train_single_epoch(model, optimizer, scheduler, data_iter,
         loss   = loss_fn(p1, p2, y1, y2)
         loss_list.append(float(loss.item()))
 
-        loss.item().backward()
-        optimizer.step()
+        
+        # *FIX-I-017
+        # *change: 'loss.item().backward()'
+        # *rationale: backward must be called on the loss tensor itself because .item() converts it to a plain Python float and destroys the computation graph 
+        loss.backward()
+
+        # *FIX-II-002
+        # *change: 'optimizer.step()' before 'torch.nn.utils.clip_grad_norm_( ...)'
+        # *rationale: gradient clipping must happen before the optimizer update so it can actually limit the gradient magnitude used in the parameter step
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        optimizer.step()
         scheduler.step()
 
     mean_loss = float(np.mean(loss_list))

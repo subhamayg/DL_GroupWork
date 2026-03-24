@@ -52,6 +52,11 @@ def train(
     optimizer_name:     str   = "adam",
     scheduler_name:     str   = "lambda",
     loss_name:          str   = "qa_nll",
+    # *EXP-010
+    # *hypothesis: changing normalization will affect training stability and QA performance
+    # *intervention: changed norm_name from "layer_norm" to "group_norm"
+    # *control: kept the training recipe and evaluation setup fixed
+    # *result: F1 reached 6.46 and EM remained 0.00, so the baseline layer_norm setting was restored
     norm_name:          str   = "layer_norm",   # "layer_norm" | "group_norm"
     norm_groups:        int   = 8,              # num_groups for group_norm
 
@@ -66,16 +71,36 @@ def train(
     # ── Scheduler hyperparameters ─────────────────────────────────────────────
     lr_step_size:       int   = 10000,  # step: decay every n steps
     lr_gamma:           float = 0.5,    # step: multiplicative decay factor
+    # *EXP-002
+    # *hypothesis: a warmup phase followed by cosine decay will improve early optimization stability compared with the previous non-warmup scheduler setup
+    # *intervention: exposed warmup_steps as a configurable scheduler hyperparameter for the warmup-plus-cosine schedule
+    # *control: kept optimizer, repaired codebase, dataset, batch size, num_steps, loss, seed, and evaluation protocol fixed
+    warmup_steps:       int = 20, 
 
     # ── Model architecture ────────────────────────────────────────────────────
     para_limit:         int   = 400,
     ques_limit:         int   = 50,
     char_limit:         int   = 16,
+    # *EXP-009
+    # *hypothesis: a smaller model width will improve optimization stability, though reduced capacity may hurt QA performance
+    # *intervention: reduced d_model from 96 to 64
+    # *control: kept the training recipe and evaluation setup fixed
+    # *result: F1 fell to 6.27 and EM remained 0.00, so the baseline d_model=96 setting was restored
     d_model:            int   = 96,
+    # *EXP-008
+    # *hypothesis: fewer attention heads will improve optimization stability, though reducing head diversity may hurt QA performance
+    # *intervention: reduced num_heads from 8 to 4
+    # *control: kept the training recipe and evaluation setup fixed
+    # *result: F1 reached 7.15 and EM remained 0.00, but this did not improve on the stronger num_heads=8 baseline, so 8 heads were restored
     num_heads:          int   = 8,
     glove_dim:          int   = 300,
     char_dim:           int   = 64,
-    dropout:            float = 0.1,
+    # *EXP-007
+    # *hypothesis: a lower dropout rate will improve training stability, though too little regularization may hurt QA performance
+    # *intervention: reduced dropout from 0.10 to 0.05
+    # *control: kept the training recipe and evaluation setup fixed
+    # *result: F1 improved to 7.22, EM stayed at 0.00, and dropout=0.05 was kept for later experiments
+    dropout:            float = 0.05,
     dropout_char:       float = 0.05,
     pretrained_char:    bool  = False,
 
@@ -104,7 +129,10 @@ def train(
     os.makedirs(save_dir, exist_ok=True)
 
     # Internal namespace required by QANet.__init__ and data utilities
-    args = argparse.Namespace({k: v for k, v in locals().items()})
+    # *FIX-I-001                                                                                 
+    # *change: 'args = argparse.Namespace({k: v for k, v in locals().items()})'               
+    # *rationale: unpacks the config dict into keyword arguments, which is the format argparse.Namespace expects 
+    args = argparse.Namespace(**{k: v for k, v in locals().items()})
 
     with open(os.path.join(save_dir, "run_config.json"), "w") as f:
         json.dump(vars(args), f, indent=2)
@@ -140,6 +168,7 @@ def train(
 
     params    = (p for p in model.parameters() if p.requires_grad)
     optimizer = optimizers[optimizer_name](params, args)
+    print("Optimizer LR at init:", optimizer.param_groups[0]["lr"])  
     scheduler = schedulers[scheduler_name](optimizer, args)
     loss_fn   = losses[loss_name]
 

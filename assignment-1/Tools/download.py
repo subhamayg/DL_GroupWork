@@ -171,8 +171,10 @@ def download_mini(
     print()
     print("Mini dataset download complete.")
 
-
-def download_spacy_model(model: str = "en") -> None:
+# *FIX-I-020
+# *change: 'def download_spacy_model(model: str = "en") -> None:'
+# *rationale: spaCy v3 deprecates legacy language shortcuts; the full pipeline name preserves the intended English model behavior without the warning
+def download_spacy_model(model: str = "en_core_web_sm") -> None:
     """Download the spaCy language model required for tokenisation.
 
     Parameters

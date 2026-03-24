@@ -13,7 +13,11 @@ from Optimizers.sgd_momentum import SGDMomentum
 def adam(params, args):
     return Adam(
         params=params,
-        lr=1.0,
+        # *EXP-003
+        # *hypothesis: lower base learning rates under the warmup-plus-cosine scheduler will further reduce loss explosion and improve training stability
+        # *intervention: changed learning_rate while keeping the warmup-plus-cosine scheduler fixed
+        # *control: kept optimizer, repaired codebase, scheduler design, dataset, batch size, num_steps, loss, seed, and evaluation protocol fixed
+        lr=args.learning_rate,
         betas=(args.beta1, args.beta2),
         eps=getattr(args, "eps", 1e-7),
         weight_decay=args.weight_decay,

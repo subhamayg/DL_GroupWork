@@ -4,7 +4,10 @@ import torch.nn.functional as F
 def qa_nll_loss(p1, p2, y1, y2):
     """Standard QA span loss.
     Expects p1/p2 to be log-probabilities (output of log_softmax)."""
-    return 0.5 * (F.nll_loss(y1, p1) + F.nll_loss(p2, y2))
+    # *FIX-I-016
+    # *change: 'return 0.5 * (F.nll_loss(y1, p1) + F.nll_loss(p2, y2))'
+    # *rationale: nll_loss expects (input, target), so the start-loss call must pass predicted log-probabilities first and gold indices second 
+    return 0.5 * (F.nll_loss(p1, y1) + F.nll_loss(p2, y2))
 
 
 def qa_ce_loss(p1, p2, y1, y2):

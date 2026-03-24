@@ -20,7 +20,10 @@ class Pointer(nn.Module):
         self.w2 = nn.Parameter(w2)
 
     def forward(self, M1: torch.Tensor, M2: torch.Tensor, M3: torch.Tensor, mask: torch.Tensor):
-        X1 = torch.cat([M1, M2], dim=0)  # [B, 2C, L]
+        # *FIX-I-015
+        # *change: 'X1 = torch.cat([M1, M2], dim=0)'
+        # *rationale: concatenates the model states along the feature/channel axis so the pointer head receives [B, 2C, L] instead of incorrectly doubling the batch dimension
+        X1 = torch.cat([M1, M2], dim=1)  # [B, 2C, L]
         X2 = torch.cat([M1, M3], dim=1)  # [B, 2C, L]
         Y1 = torch.matmul(self.w1, X1)  # [B, L]
         Y2 = torch.matmul(self.w2, X2)  # [B, L]
