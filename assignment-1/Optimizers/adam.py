@@ -64,7 +64,7 @@ class Adam(Optimizer):
 
                 # *FIX-II-004
                 # *change: 'm, v = state["m"], state["v"]'
-                # *rationale: optimizer state keys must match the buffers created during initialization so moment estimates can be updated correctly    
+                # *rationale: optimizer state keys must match the buffers created during initialization so moment estimates can be updated correctly
                 m, v = state["exp_avg"], state["exp_avg_sq"]
                 state["step"] += 1
                 t = state["step"]
@@ -73,8 +73,8 @@ class Adam(Optimizer):
                 m.mul_(beta1).add_(grad, alpha=1.0 - beta1)
                 # *FIX-II-006
                 # *change: 'v.mul_(beta2).add_(grad, alpha=1.0 - beta2)'
-                # *rationale: Adam's second moment must track squared gradients, not raw gradients                                                     
-                v.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2) 
+                # *rationale: Adam's second moment must track squared gradients, not raw gradients
+                v = beta2 * v + (1 - beta2) * (grad * grad)
 
                 # Bias correction
                 # *FIX-II-007                                                       
