@@ -59,7 +59,7 @@ class QANet(nn.Module):
         # *intervention: reduced modeling encoder blocks from 7 to 4
         # *control: kept the training recipe and evaluation setup fixed
         # *result: reducing encoder depth greatly improved optimization and lowered losses, but test F1 dropped from 7.22 to 6.04, so the baseline 7-block setting was retained
-        self.model_enc_blks = nn.ModuleList([copy.deepcopy(base_enc) for _ in range(4)])
+        self.model_enc_blks = nn.ModuleList([copy.deepcopy(base_enc) for _ in range(7)])
 
         self.out = Pointer(d_model)
 

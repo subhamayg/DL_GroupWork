@@ -74,7 +74,7 @@ class Adam(Optimizer):
                 # *FIX-II-006
                 # *change: 'v.mul_(beta2).add_(grad, alpha=1.0 - beta2)'
                 # *rationale: Adam's second moment must track squared gradients, not raw gradients
-                v = beta2 * v + (1 - beta2) * (grad * grad)
+                v.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)  # v = beta2 * v + (1 - beta2) * (grad * grad) 
 
                 # Bias correction
                 # *FIX-II-007                                                       
