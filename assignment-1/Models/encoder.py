@@ -110,6 +110,11 @@ class EncoderBlock(nn.Module):
         self.L = conv_num
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        # *EXP-011 ablation: positional encoding removed
+        # *hypothesis: removing positional encoding will reduce QA performance because self-attention alone is not order-aware (remove baseline: out = self.pos(x) and add experiment: out = x instead)
+        # *intervention: replaced positional encoding by bypassing self.pos(x) and directly using input x
+        # *control: kept optimizer, scheduler, learning rate, batch size, num_steps, dropout, and all other architectural components fixed
+        # *result: removing positional encoding significantly reduced F1 (≈7.27 → ≈3.65), indicating that sequence-order information is critical for QANet
         out = self.pos(x)
         res = out
         out = self.normb(out)
@@ -129,6 +134,13 @@ class EncoderBlock(nn.Module):
         # *FIX-II-003
         # *change: 'out = self.self_att(out, mask); out = res'
         # *rationale: preserves the self-attention output in the residual pathway instead of discarding it immediately after computation
+
+        # *EXP-013
+        # *hypothesis: removing self-attention will reduce performance by eliminating global dependency modeling
+        # *intervention: bypassed self-attention by skipping self.self_att(out, mask) and directly using residual connection res (out = res; out = self.drop(out)).
+        # *control: kept optimizer, scheduler, learning rate, dataset, batch size, num_steps, dropout, and other encoder components fixed
+        # *result: removing self-attention slightly reduced F1 (≈7.27 → ≈7.14), indicating that attention contributes global context but is not the sole driver of performance
+
         out = self.self_att(out, mask)
         out = out + res
         out = self.drop(out)
