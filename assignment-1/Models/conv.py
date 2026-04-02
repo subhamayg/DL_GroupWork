@@ -177,6 +177,33 @@ class DepthwiseSeparableConv(nn.Module):
         if self.pointwise_conv.bias is not None:
             constant_(self.pointwise_conv.bias, 0.0)
 
+# *EXP-014
+# *hypothesis: replacing depthwise separable convolution with standard convolution will reduce performance by removing efficient feature factorization
+# *intervention: replaced depthwise + pointwise convolution with a single standard convolution (groups=1)
+# *control: kept optimizer, scheduler, learning rate, dataset, batch size, num_steps, dropout, and other architectural components fixed
+# *result: standard convolution reduced F1 (≈7.27 → ≈5.57), suggesting that separable convolution is an important component of QANet
+    
+#class DepthwiseSeparableConv(nn.Module):
+    #def __init__(self, in_ch: int, out_ch: int, k: int, dim: int = 1, bias: bool = True, init_name: str = "kaiming"): super().__init__()
+
+        # keep attribute names so the rest of the code does not break
+        #self.depthwise_conv = nn.Identity()
+
+        #if dim == 1:
+            #self.pointwise_conv = Conv1d(in_ch, out_ch, k, groups=1, padding=k // 2, bias=bias)
+        #elif dim == 2:
+            #self.pointwise_conv = Conv2d(in_ch, out_ch, k, groups=1, padding=k // 2, bias=bias)
+        #else:
+            #raise ValueError("dim must be 1 or 2")
+
+        #init_fn = initializations[init_name]
+        #init_fn(self.pointwise_conv.weight)
+        #if self.pointwise_conv.bias is not None:
+            #constant_(self.pointwise_conv.bias, 0.0)
+
+    #def forward(self, x):
+        #return self.pointwise_conv(self.depthwise_conv(x))
+
     def forward(self, x):
         # *FIX-I-006                                                                                 
         # *change: 'return self.depthwise_conv(self.pointwi se_conv(x))'                          
